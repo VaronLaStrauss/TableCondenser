@@ -6,10 +6,6 @@ class TableCondenser {
   /** @type {HTMLElement} */
   thead = null;
 
-  /** @type {boolean | undefined} */
-  activeFilter = undefined;
-  activeColumn = 5;
-
   /** @type {Array<number>} */
   filterColumns = [];
   filter = "";
@@ -28,20 +24,24 @@ class TableCondenser {
   unpaginatedRows = [];
 
   cbxSelector = `input[type="checkbox"]`;
+  hasCbx = true;
 
   /**
    * @param {HTMLElement} tbody
    * @param {HTMLElement} thead
+   * @param {boolean | undefined} hasCbx
    */
-  constructor(tbody, thead) {
+  constructor(tbody, thead, hasCbx = true) {
     this.tbody = tbody.cloneNode(true);
     this.thead = thead;
+    this.hasCbx = hasCbx;
   }
 
   /**
    * @param {HTMLInputElement} cbx
    */
   selectCurrentRows(cbxTh) {
+    if (!this.hasCbx) return;
     const checked = cbxTh.checked;
     for (const [tr] of this.currentRows) {
       const cbx = tr.querySelector(this.cbxSelector);
@@ -53,17 +53,20 @@ class TableCondenser {
    * @param {HTMLInputElement} cbxTh
    */
   selectOneRow(cbxTh) {
+    if (!this.hasCbx) return;
     if (this.isAllSelected()) cbxTh.checked = true;
     else cbxTh.checked = false;
   }
 
   isAllSelected() {
+    if (!this.hasCbx) return [];
     return this.currentRows.every(
       ([tr]) => tr.querySelector(this.cbxSelector).checked
     );
   }
 
   deleteCheckedRows() {
+    if (!this.hasCbx) return;
     const sortedRows = this.currentRows.sort(([_x, i], [_y, j]) => j - i);
     for (const [tr, i] of sortedRows) {
       if (!tr.querySelector(this.cbxSelector).checked) continue;
@@ -74,12 +77,14 @@ class TableCondenser {
   }
 
   get checkedRows() {
+    if (!this.hasCbx) return [];
     return this.currentRows.filter(
       ([tr]) => tr.querySelector(this.cbxSelector).checked
     );
   }
 
   deselectHeaderCbx() {
+    if (!this.hasCbx) return;
     /** @type {HTMLInputElement} */
     const cbxTh = this.thead.querySelector(this.cbxSelector);
     cbxTh.checked = false;
@@ -129,22 +134,6 @@ class TableCondenser {
     for (let i = 0; i < rawRows.length; i++) {
       const dataRow = rawRows[i];
       let shouldIncludeRow = false;
-
-      // Apply active filter
-      if (this.activeFilter === undefined) shouldIncludeRow = true;
-      else {
-        const dataColumn = Array.from(dataRow.getElementsByTagName("td"))[
-          this.activeColumn
-        ];
-        const dataValue = (dataColumn.textContent || dataColumn.innerText)
-          .trim()
-          .toLowerCase();
-        shouldIncludeRow =
-          (this.activeFilter && dataValue === "active") ||
-          (!this.activeFilter && dataValue === "inactive");
-      }
-
-      if (!shouldIncludeRow) continue;
 
       const filter = this.filter.trim().toLowerCase();
       // Apply search filter
@@ -202,7 +191,7 @@ class TableCondenser {
     rows = rows.slice(this.page * this.limit, (this.page + 1) * this.limit);
     this.currentRows = [...rows];
 
-    this.setListeners();
+    if (this.hasCbx) this.setListeners();
 
     return this.currentRows.map(([tr]) => tr);
   }
